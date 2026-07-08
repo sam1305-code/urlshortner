@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
+import com.example.urlshortener.analytics.service.ClickAnalyticsService;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
 import com.example.urlshortener.url.service.ShortUrlService;
@@ -17,12 +19,14 @@ import com.example.urlshortener.url.service.ShortUrlService;
 class ShortUrlControllerTest {
 
     private StubShortUrlService shortUrlService;
+    private StubClickAnalyticsService clickAnalyticsService;
     private ShortUrlController controller;
 
     @BeforeEach
     void setUp() {
         shortUrlService = new StubShortUrlService();
-        controller = new ShortUrlController(shortUrlService);
+        clickAnalyticsService = new StubClickAnalyticsService();
+        controller = new ShortUrlController(shortUrlService, clickAnalyticsService);
     }
 
     @Test
@@ -47,6 +51,19 @@ class ShortUrlControllerTest {
         assertThat(shortUrlService.ownerId).isEqualTo(ownerId);
     }
 
+    @Test
+    void getAnalyticsReturnsAnalyticsForAuthenticatedOwner() {
+        UUID ownerId = UUID.fromString("9abda1f4-6dd0-4c92-9326-91f0846f2e4f");
+        clickAnalyticsService.response = new ClickAnalyticsResponse("abc123XY", 42);
+
+        ResponseEntity<ClickAnalyticsResponse> response = controller.getAnalytics(jwt(ownerId), "abc123XY");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo(clickAnalyticsService.response);
+        assertThat(clickAnalyticsService.ownerId).isEqualTo(ownerId);
+        assertThat(clickAnalyticsService.shortCode).isEqualTo("abc123XY");
+    }
+
     private Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token")
                 .header("alg", "HS256")
@@ -68,6 +85,25 @@ class ShortUrlControllerTest {
         @Override
         public String resolveOriginalUrl(String shortCode) {
             throw new UnsupportedOperationException("Not needed by this test.");
+        }
+    }
+
+    private static class StubClickAnalyticsService implements ClickAnalyticsService {
+
+        private UUID ownerId;
+        private String shortCode;
+        private ClickAnalyticsResponse response;
+
+        @Override
+        public void recordClick(String shortCode, String ipAddress, String userAgent, String referer) {
+            throw new UnsupportedOperationException("Not needed by this test.");
+        }
+
+        @Override
+        public ClickAnalyticsResponse getAnalytics(UUID ownerId, String shortCode) {
+            this.ownerId = ownerId;
+            this.shortCode = shortCode;
+            return response;
         }
     }
 }

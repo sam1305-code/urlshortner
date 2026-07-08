@@ -13,6 +13,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
 import com.example.urlshortener.exception.GlobalExceptionHandler;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
@@ -123,6 +124,11 @@ class RedirectControllerTest {
             this.ipAddress = ipAddress;
             this.userAgent = userAgent;
             this.referer = referer;
+        }
+
+        @Override
+        public ClickAnalyticsResponse getAnalytics(UUID ownerId, String shortCode) {
+            throw new UnsupportedOperationException("Not needed by this test.");
         }
     }
 }

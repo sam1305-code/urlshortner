@@ -2,6 +2,7 @@ package com.example.urlshortener.url.repository;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Repository;
@@ -21,5 +22,11 @@ public class InMemoryShortUrlRepository implements ShortUrlRepository {
     @Override
     public Optional<ShortUrl> findByShortCode(String shortCode) {
         return Optional.ofNullable(urlsByShortCode.get(shortCode));
+    }
+
+    @Override
+    public Optional<ShortUrl> findByShortCodeAndOwnerId(String shortCode, UUID ownerId) {
+        return findByShortCode(shortCode)
+                .filter(shortUrl -> shortUrl.ownerId().equals(ownerId));
     }
 }
