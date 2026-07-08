@@ -14,6 +14,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
 import com.example.urlshortener.auth.exception.InvalidCredentialsException;
+import com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
 
@@ -64,6 +65,19 @@ public class GlobalExceptionHandler {
                 request.getRequestURI());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(ShortCodeAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleShortCodeAlreadyExistsException(
+            ShortCodeAlreadyExistsException exception,
+            HttpServletRequest request) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                "Custom alias is already in use.",
+                request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(ShortUrlNotFoundException.class)

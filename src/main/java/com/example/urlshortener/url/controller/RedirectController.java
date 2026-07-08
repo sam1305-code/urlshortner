@@ -20,7 +20,7 @@ public class RedirectController {
         this.shortUrlService = shortUrlService;
     }
 
-    @GetMapping("/{shortCode:[0-9A-Za-z]{8}}")
+    @GetMapping("/{shortCode:[0-9A-Za-z][0-9A-Za-z_-]{3,31}}")
     public ResponseEntity<Void> redirect(@PathVariable String shortCode) {
         String originalUrl = shortUrlService.resolveOriginalUrl(shortCode);
 

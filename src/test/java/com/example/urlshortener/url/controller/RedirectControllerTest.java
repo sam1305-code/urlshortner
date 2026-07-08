@@ -44,6 +44,15 @@ class RedirectControllerTest {
     }
 
     @Test
+    void redirectSupportsCustomAliasShape() throws Exception {
+        shortUrlService.originalUrl = "https://example.com/docs";
+
+        mockMvc.perform(get("/my-alias"))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "https://example.com/docs"));
+    }
+
+    @Test
     void redirectReturnsNotFoundWhenShortCodeDoesNotExist() throws Exception {
         shortUrlService.notFound = true;
 

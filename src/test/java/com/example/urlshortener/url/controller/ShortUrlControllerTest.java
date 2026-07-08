@@ -38,6 +38,7 @@ class ShortUrlControllerTest {
 
         ResponseEntity<ShortUrlResponse> response = controller.createShortUrl(jwt(ownerId), new CreateShortUrlRequest(
                 "https://example.com/docs",
+                null,
                 Instant.parse("2026-07-09T10:15:30Z")));
 
         assertThat(response.getStatusCode().value()).isEqualTo(201);

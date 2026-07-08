@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
+import com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
 import com.example.urlshortener.url.model.ShortUrl;
@@ -40,17 +41,15 @@ public class DefaultShortUrlService implements ShortUrlService {
 
     @Override
     public ShortUrlResponse createShortUrl(UUID ownerId, CreateShortUrlRequest request) {
-        for (int attempt = 0; attempt < MAX_SHORT_CODE_ATTEMPTS; attempt++) {
-            ShortUrl shortUrl = new ShortUrl(
-                    UUID.randomUUID(),
-                    shortCodeGenerator.generate(),
-                    request.originalUrl(),
-                    ownerId,
-                    Instant.now(clock),
-                    request.expiresAt(),
-                    false);
+        if (request.customAlias() != null && !request.customAlias().isBlank()) {
+            return createWithShortCode(ownerId, request, request.customAlias());
+        }
 
-            if (shortUrlRepository.insertIfShortCodeAbsent(shortUrl)) {
+        for (int attempt = 0; attempt < MAX_SHORT_CODE_ATTEMPTS; attempt++) {
+            String generatedShortCode = shortCodeGenerator.generate();
+            ShortUrl shortUrl = buildShortUrl(ownerId, request, generatedShortCode);
+
+            if (insert(shortUrl)) {
                 return shortUrl.toResponse();
             }
         }
@@ -69,5 +68,29 @@ public class DefaultShortUrlService implements ShortUrlService {
         }
 
         return shortUrl.originalUrl();
+    }
+
+    private ShortUrlResponse createWithShortCode(UUID ownerId, CreateShortUrlRequest request, String shortCode) {
+        ShortUrl shortUrl = buildShortUrl(ownerId, request, shortCode);
+        if (!insert(shortUrl)) {
+            throw new ShortCodeAlreadyExistsException(shortCode);
+        }
+
+        return shortUrl.toResponse();
+    }
+
+    private ShortUrl buildShortUrl(UUID ownerId, CreateShortUrlRequest request, String shortCode) {
+        return new ShortUrl(
+                UUID.randomUUID(),
+                shortCode,
+                request.originalUrl(),
+                ownerId,
+                Instant.now(clock),
+                request.expiresAt(),
+                false);
+    }
+
+    private boolean insert(ShortUrl shortUrl) {
+        return shortUrlRepository.insertIfShortCodeAbsent(shortUrl);
     }
 }

@@ -41,6 +41,7 @@ class DefaultShortUrlServiceTest {
 
         ShortUrlResponse response = service.createShortUrl(ownerId, new CreateShortUrlRequest(
                 "https://example.com/docs",
+                null,
                 expiresAt));
 
         assertThat(response.shortCode()).isEqualTo("abc123XY");
@@ -59,9 +60,10 @@ class DefaultShortUrlServiceTest {
                 fixedClock());
         UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
 
-        service.createShortUrl(ownerId, new CreateShortUrlRequest("https://example.com/one", null));
+        service.createShortUrl(ownerId, new CreateShortUrlRequest("https://example.com/one", null, null));
         ShortUrlResponse secondResponse = service.createShortUrl(ownerId, new CreateShortUrlRequest(
                 "https://example.com/two",
+                null,
                 null));
 
         assertThat(secondResponse.shortCode()).isEqualTo("nextCode");
@@ -76,6 +78,7 @@ class DefaultShortUrlServiceTest {
         UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
         service.createShortUrl(ownerId, new CreateShortUrlRequest(
                 "https://example.com/docs",
+                null,
                 Instant.parse("2026-07-09T10:15:30Z")));
 
         String originalUrl = service.resolveOriginalUrl("abc123XY");
@@ -92,6 +95,7 @@ class DefaultShortUrlServiceTest {
         UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
         service.createShortUrl(ownerId, new CreateShortUrlRequest(
                 "https://example.com/docs",
+                null,
                 Instant.parse("2026-07-08T10:15:30Z")));
 
         assertThatThrownBy(() -> service.resolveOriginalUrl("abc123XY"))
@@ -107,6 +111,42 @@ class DefaultShortUrlServiceTest {
 
         assertThatThrownBy(() -> service.resolveOriginalUrl("missing1"))
                 .isInstanceOf(ShortUrlNotFoundException.class);
+    }
+
+    @Test
+    void createShortUrlUsesCustomAliasWhenProvided() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("ignored1"),
+                fixedClock());
+        UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
+
+        ShortUrlResponse response = service.createShortUrl(ownerId, new CreateShortUrlRequest(
+                "https://example.com/docs",
+                "my-alias",
+                null));
+
+        assertThat(response.shortCode()).isEqualTo("my-alias");
+        assertThat(repository.findByShortCode("my-alias")).isPresent();
+    }
+
+    @Test
+    void createShortUrlRejectsCustomAliasWhenAlreadyInUse() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("ignored1"),
+                fixedClock());
+        UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
+        service.createShortUrl(ownerId, new CreateShortUrlRequest(
+                "https://example.com/one",
+                "my-alias",
+                null));
+
+        assertThatThrownBy(() -> service.createShortUrl(ownerId, new CreateShortUrlRequest(
+                "https://example.com/two",
+                "my-alias",
+                null)))
+                .isInstanceOf(com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException.class);
     }
 
     private Clock fixedClock() {
