@@ -113,6 +113,11 @@ class RedirectControllerTest {
         public PagedShortUrlResponse listShortUrls(UUID ownerId, String searchTerm, int page, int size) {
             throw new UnsupportedOperationException("Not needed by this test.");
         }
+
+        @Override
+        public void deleteShortUrl(UUID ownerId, String shortCode) {
+            throw new UnsupportedOperationException("Not needed by this test.");
+        }
     }
 
     private static class StubClickAnalyticsService implements ClickAnalyticsService {

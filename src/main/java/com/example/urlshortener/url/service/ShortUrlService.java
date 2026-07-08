@@ -13,4 +13,6 @@ public interface ShortUrlService {
     String resolveOriginalUrl(String shortCode);
 
     PagedShortUrlResponse listShortUrls(UUID ownerId, String searchTerm, int page, int size);
+
+    void deleteShortUrl(UUID ownerId, String shortCode);
 }

@@ -15,4 +15,6 @@ public interface ShortUrlRepository {
     Optional<ShortUrl> findByShortCodeAndOwnerId(String shortCode, UUID ownerId);
 
     List<ShortUrl> findActiveByOwnerId(UUID ownerId, String searchTerm);
+
+    ShortUrl save(ShortUrl shortUrl);
 }

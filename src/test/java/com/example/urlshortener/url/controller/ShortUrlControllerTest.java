@@ -80,6 +80,18 @@ class ShortUrlControllerTest {
         assertThat(shortUrlService.size).isEqualTo(10);
     }
 
+    @Test
+    void deleteShortUrlReturnsNoContentForAuthenticatedOwner() {
+        UUID ownerId = UUID.fromString("9abda1f4-6dd0-4c92-9326-91f0846f2e4f");
+
+        ResponseEntity<Void> response = controller.deleteShortUrl(jwt(ownerId), "abc123XY");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(shortUrlService.ownerId).isEqualTo(ownerId);
+        assertThat(shortUrlService.deletedShortCode).isEqualTo("abc123XY");
+    }
+
+
     private Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token")
                 .header("alg", "HS256")
@@ -95,6 +107,7 @@ class ShortUrlControllerTest {
         private int page;
         private int size;
         private PagedShortUrlResponse pageResponse;
+        private String deletedShortCode;
 
         @Override
         public ShortUrlResponse createShortUrl(UUID ownerId, CreateShortUrlRequest request) {
@@ -114,6 +127,12 @@ class ShortUrlControllerTest {
             this.page = page;
             this.size = size;
             return pageResponse;
+        }
+
+        @Override
+        public void deleteShortUrl(UUID ownerId, String shortCode) {
+            this.ownerId = ownerId;
+            this.deletedShortCode = shortCode;
         }
     }
 

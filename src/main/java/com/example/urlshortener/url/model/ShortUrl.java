@@ -17,4 +17,8 @@ public record ShortUrl(
     public ShortUrlResponse toResponse() {
         return new ShortUrlResponse(id, shortCode, originalUrl, ownerId, createdAt, expiresAt);
     }
+
+    public ShortUrl markDeleted() {
+        return new ShortUrl(id, shortCode, originalUrl, ownerId, createdAt, expiresAt, true);
+    }
 }

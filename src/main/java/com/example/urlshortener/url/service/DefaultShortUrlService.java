@@ -95,6 +95,15 @@ public class DefaultShortUrlService implements ShortUrlService {
                 totalPages);
     }
 
+    @Override
+    public void deleteShortUrl(UUID ownerId, String shortCode) {
+        ShortUrl shortUrl = shortUrlRepository.findByShortCodeAndOwnerId(shortCode, ownerId)
+                .filter(url -> !url.deleted())
+                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
+
+        shortUrlRepository.save(shortUrl.markDeleted());
+    }
+
     private void validatePageRequest(int page, int size) {
         if (page < 0) {
             throw new InvalidPageRequestException("Page index must be zero or greater.");

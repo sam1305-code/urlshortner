@@ -46,6 +46,12 @@ public class InMemoryShortUrlRepository implements ShortUrlRepository {
                 .toList();
     }
 
+    @Override
+    public ShortUrl save(ShortUrl shortUrl) {
+        urlsByShortCode.put(shortUrl.shortCode(), shortUrl);
+        return shortUrl;
+    }
+
     private boolean matchesSearch(ShortUrl shortUrl, String normalizedSearchTerm) {
         if (normalizedSearchTerm == null) {
             return true;

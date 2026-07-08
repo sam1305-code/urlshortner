@@ -186,6 +186,39 @@ class DefaultShortUrlServiceTest {
                 .isInstanceOf(InvalidPageRequestException.class);
     }
 
+    @Test
+    void deleteShortUrlMarksUrlDeletedAndStopsPublicResolution() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("abc123XY"),
+                fixedClock());
+        UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
+        service.createShortUrl(ownerId, new CreateShortUrlRequest("https://example.com/docs", null, null));
+
+        service.deleteShortUrl(ownerId, "abc123XY");
+
+        assertThat(repository.findByShortCode("abc123XY")).isPresent();
+        assertThat(repository.findByShortCode("abc123XY").orElseThrow().deleted()).isTrue();
+        assertThatThrownBy(() -> service.resolveOriginalUrl("abc123XY"))
+                .isInstanceOf(ShortUrlNotFoundException.class);
+        assertThat(service.listShortUrls(ownerId, null, 0, 20).items()).isEmpty();
+    }
+
+    @Test
+    void deleteShortUrlRejectsUrlsOwnedByAnotherUser() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("abc123XY"),
+                fixedClock());
+        UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
+        UUID otherOwnerId = UUID.fromString("9eb309ac-ff10-4bc8-8f05-c778c1f8fbd3");
+        service.createShortUrl(otherOwnerId, new CreateShortUrlRequest("https://example.com/docs", null, null));
+
+        assertThatThrownBy(() -> service.deleteShortUrl(ownerId, "abc123XY"))
+                .isInstanceOf(ShortUrlNotFoundException.class);
+        assertThat(repository.findByShortCode("abc123XY").orElseThrow().deleted()).isFalse();
+    }
+
     private Clock fixedClock() {
         return Clock.fixed(Instant.parse("2026-07-08T10:15:30Z"), ZoneOffset.UTC);
     }
