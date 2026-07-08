@@ -16,18 +16,22 @@ import com.example.urlshortener.auth.exception.InvalidCredentialsException;
 import com.example.urlshortener.auth.model.UserAccount;
 import com.example.urlshortener.auth.repository.InMemoryUserAccountRepository;
 import com.example.urlshortener.auth.repository.UserAccountRepository;
+import com.example.urlshortener.auth.token.AuthToken;
+import com.example.urlshortener.auth.token.JwtTokenService;
 
 class DefaultAuthServiceTest {
 
     private PasswordEncoder passwordEncoder;
     private UserAccountRepository userAccountRepository;
+    private JwtTokenService jwtTokenService;
     private DefaultAuthService authService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder(12);
         userAccountRepository = new InMemoryUserAccountRepository();
-        authService = new DefaultAuthService(userAccountRepository, passwordEncoder);
+        jwtTokenService = new StubJwtTokenService();
+        authService = new DefaultAuthService(userAccountRepository, passwordEncoder, jwtTokenService);
     }
 
     @Test
@@ -74,6 +78,9 @@ class DefaultAuthServiceTest {
 
         assertThat(response.name()).isEqualTo("Samhita");
         assertThat(response.email()).isEqualTo("samhita@example.com");
+        assertThat(response.accessToken()).isEqualTo("test-jwt-token");
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresInSeconds()).isEqualTo(900);
     }
 
     @Test
@@ -101,5 +108,20 @@ class DefaultAuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("Invalid email or password.");
+    }
+
+    private static class StubJwtTokenService extends JwtTokenService {
+
+        StubJwtTokenService() {
+            super(new com.example.urlshortener.config.JwtProperties(
+                    "test-issuer",
+                    "test-secret-must-be-at-least-32-bytes",
+                    java.time.Duration.ofMinutes(15)));
+        }
+
+        @Override
+        public AuthToken createAccessToken(UserAccount userAccount) {
+            return new AuthToken("test-jwt-token", "Bearer", 900);
+        }
     }
 }

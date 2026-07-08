@@ -14,6 +14,7 @@ import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
 import com.example.urlshortener.auth.exception.InvalidCredentialsException;
 import com.example.urlshortener.auth.model.UserAccount;
 import com.example.urlshortener.auth.repository.UserAccountRepository;
+import com.example.urlshortener.auth.token.JwtTokenService;
 import com.example.urlshortener.auth.util.EmailNormalizer;
 
 @Service
@@ -21,10 +22,15 @@ public class DefaultAuthService implements AuthService {
 
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenService jwtTokenService;
 
-    public DefaultAuthService(UserAccountRepository userAccountRepository, PasswordEncoder passwordEncoder) {
+    public DefaultAuthService(
+            UserAccountRepository userAccountRepository,
+            PasswordEncoder passwordEncoder,
+            JwtTokenService jwtTokenService) {
         this.userAccountRepository = userAccountRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
@@ -55,6 +61,6 @@ public class DefaultAuthService implements AuthService {
             throw new InvalidCredentialsException();
         }
 
-        return userAccount.toLoginResponse();
+        return userAccount.toLoginResponse(jwtTokenService.createAccessToken(userAccount));
     }
 }

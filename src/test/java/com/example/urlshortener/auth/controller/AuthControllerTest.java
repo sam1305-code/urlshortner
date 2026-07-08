@@ -112,7 +112,10 @@ class AuthControllerTest {
         authService.loginHandler = request -> new UserLoginResponse(
                 userId,
                 "Samhita",
-                "samhita@example.com");
+                "samhita@example.com",
+                "jwt-token",
+                "Bearer",
+                900);
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -126,6 +129,9 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.userId").value(userId.toString()))
                 .andExpect(jsonPath("$.name").value("Samhita"))
                 .andExpect(jsonPath("$.email").value("samhita@example.com"))
+                .andExpect(jsonPath("$.accessToken").value("jwt-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresInSeconds").value(900))
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
 
@@ -177,7 +183,10 @@ class AuthControllerTest {
                 request -> new UserLoginResponse(
                         UUID.randomUUID(),
                         "Samhita",
-                        request.email());
+                        request.email(),
+                        "jwt-token",
+                        "Bearer",
+                        900);
 
         @Override
         public UserRegistrationResponse register(com.example.urlshortener.auth.dto.UserRegistrationRequest request) {
