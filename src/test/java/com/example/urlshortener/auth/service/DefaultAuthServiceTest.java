@@ -11,16 +11,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.example.urlshortener.auth.dto.UserRegistrationRequest;
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
 import com.example.urlshortener.auth.model.UserAccount;
+import com.example.urlshortener.auth.repository.InMemoryUserAccountRepository;
+import com.example.urlshortener.auth.repository.UserAccountRepository;
 
-class InMemoryAuthServiceTest {
+class DefaultAuthServiceTest {
 
     private PasswordEncoder passwordEncoder;
-    private InMemoryAuthService authService;
+    private UserAccountRepository userAccountRepository;
+    private DefaultAuthService authService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder(12);
-        authService = new InMemoryAuthService(passwordEncoder);
+        userAccountRepository = new InMemoryUserAccountRepository();
+        authService = new DefaultAuthService(userAccountRepository, passwordEncoder);
     }
 
     @Test
@@ -30,7 +34,7 @@ class InMemoryAuthServiceTest {
                 "  SAMHITA@example.COM  ",
                 "StrongPass123!"));
 
-        UserAccount userAccount = authService.findByEmail("samhita@example.com").orElseThrow();
+        UserAccount userAccount = userAccountRepository.findByEmail("samhita@example.com").orElseThrow();
 
         assertThat(userAccount.name()).isEqualTo("Samhita");
         assertThat(userAccount.email()).isEqualTo("samhita@example.com");
