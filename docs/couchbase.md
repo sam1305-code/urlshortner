@@ -71,3 +71,34 @@ Couchbase is a good fit for a URL shortener because the main access pattern is d
 - Keep flexible analytics documents without heavy relational joins.
 
 The short-code lookup uses a deterministic document key, which is faster and simpler than querying by alias.
+
+## User Account Document
+
+Document key:
+
+```text
+user::{sha256(normalizedEmail)}
+```
+
+Example document:
+
+```json
+{
+  "type": "user_account",
+  "id": "9abda1f4-6dd0-4c92-9326-91f0846f2e4f",
+  "name": "Samhita",
+  "email": "samhita@example.com",
+  "passwordHash": "$2a$12$...",
+  "createdAt": "2026-07-08T10:15:30Z"
+}
+```
+
+The email is normalized before hashing, so `SAMHITA@example.com` and `samhita@example.com` map to the same document. The key is hashed because document IDs often appear in logs, metrics, and support tooling; hashing avoids placing raw email addresses in those locations.
+
+Additional user index:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_user_account_created_at
+ON `url_shortener`(createdAt DESC)
+WHERE type = "user_account";
+```
