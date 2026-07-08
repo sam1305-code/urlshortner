@@ -16,6 +16,11 @@ management:
         enabled: true
 
 app:
+  rate-limit:
+    enabled: true
+    capacity: 20
+    refill-tokens: 20
+    refill-period: 1m
   url-shortener:
     public-base-url: http://localhost:8080
   security:

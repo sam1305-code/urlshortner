@@ -1,0 +1,12 @@
+spring:
+  couchbase:
+    connection-string: couchbase://localhost
+    username: Administrator
+    password: password
+  data:
+    couchbase:
+      bucket-name: url_shortener
+
+app:
+  couchbase:
+    bucket-name: url_shortener

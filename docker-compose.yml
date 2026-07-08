@@ -1,0 +1,12 @@
+services:
+  couchbase:
+    image: couchbase/server:community-7.6.2
+    container_name: url-shortener-couchbase
+    ports:
+      - "8091-8097:8091-8097"
+      - "11210-11211:11210-11211"
+    volumes:
+      - couchbase-data:/opt/couchbase/var
+
+volumes:
+  couchbase-data:

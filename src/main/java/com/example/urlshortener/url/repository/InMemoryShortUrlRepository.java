@@ -8,11 +8,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.example.urlshortener.url.model.ShortUrl;
 
 @Repository
+@Profile("!couchbase")
 public class InMemoryShortUrlRepository implements ShortUrlRepository {
 
     private final Map<String, ShortUrl> urlsByShortCode = new ConcurrentHashMap<>();
