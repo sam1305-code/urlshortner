@@ -41,6 +41,20 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void openApiDocsArePublic() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl() + "/v3/api-docs"))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("Distributed URL Shortener API");
+        assertThat(response.body()).contains("bearerAuth");
+    }
+
+    @Test
     void protectedEndpointAcceptsValidBearerToken() throws Exception {
         UUID userId = UUID.fromString("9abda1f4-6dd0-4c92-9326-91f0846f2e4f");
         UserAccount userAccount = new UserAccount(
