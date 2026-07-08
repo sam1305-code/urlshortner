@@ -1,7 +1,10 @@
 package com.example.urlshortener.url.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +21,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import com.example.urlshortener.config.RedisCacheProperties;
 import com.example.urlshortener.url.model.ShortUrl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class RedisShortUrlCacheTest {
@@ -65,6 +69,15 @@ class RedisShortUrlCacheTest {
     }
 
     @Test
+    void getReturnsEmptyWhenRedisReadFails() {
+        when(valueOperations.get("short-url:abc123XY")).thenThrow(new RuntimeException("Redis unavailable"));
+
+        Optional<CachedShortUrl> cachedShortUrl = cache.get("abc123XY");
+
+        assertThat(cachedShortUrl).isEmpty();
+    }
+
+    @Test
     void putUsesConfiguredTtlWhenUrlDoesNotExpire() {
         cache.put(shortUrl(null), Instant.parse("2026-07-08T10:15:30Z"));
 
@@ -86,10 +99,43 @@ class RedisShortUrlCacheTest {
     }
 
     @Test
+    void putDoesNotThrowWhenRedisWriteFails() {
+        doThrow(new RuntimeException("Redis unavailable"))
+                .when(valueOperations)
+                .set(any(), any(), any(Duration.class));
+
+        assertThatCode(() -> cache.put(shortUrl(null), Instant.parse("2026-07-08T10:15:30Z")))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void putDoesNotThrowWhenSerializationFails() throws JsonProcessingException {
+        ObjectMapper objectMapper = mock(ObjectMapper.class);
+        when(objectMapper.writeValueAsString(any()))
+                .thenThrow(new JsonProcessingException("Serialization failed") {
+                });
+        RedisShortUrlCache cacheWithFailingMapper = new RedisShortUrlCache(
+                redisTemplate,
+                objectMapper,
+                new RedisCacheProperties(Duration.ofMinutes(10)));
+
+        assertThatCode(() -> cacheWithFailingMapper.put(shortUrl(null), Instant.parse("2026-07-08T10:15:30Z")))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void evictDeletesRedisKey() {
         cache.evict("abc123XY");
 
         verify(redisTemplate).delete("short-url:abc123XY");
+    }
+
+    @Test
+    void evictDoesNotThrowWhenRedisDeleteFails() {
+        when(redisTemplate.delete("short-url:abc123XY")).thenThrow(new RuntimeException("Redis unavailable"));
+
+        assertThatCode(() -> cache.evict("abc123XY"))
+                .doesNotThrowAnyException();
     }
 
     private ShortUrl shortUrl(Instant expiresAt) {
