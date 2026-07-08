@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
+import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
 import com.example.urlshortener.url.service.ShortUrlService;
 
@@ -64,6 +65,21 @@ class ShortUrlControllerTest {
         assertThat(clickAnalyticsService.shortCode).isEqualTo("abc123XY");
     }
 
+    @Test
+    void listShortUrlsReturnsPageForAuthenticatedOwner() {
+        UUID ownerId = UUID.fromString("9abda1f4-6dd0-4c92-9326-91f0846f2e4f");
+        shortUrlService.pageResponse = new PagedShortUrlResponse(java.util.List.of(), 1, 10, 0, 0);
+
+        ResponseEntity<PagedShortUrlResponse> response = controller.listShortUrls(jwt(ownerId), "docs", 1, 10);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo(shortUrlService.pageResponse);
+        assertThat(shortUrlService.ownerId).isEqualTo(ownerId);
+        assertThat(shortUrlService.searchTerm).isEqualTo("docs");
+        assertThat(shortUrlService.page).isEqualTo(1);
+        assertThat(shortUrlService.size).isEqualTo(10);
+    }
+
     private Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token")
                 .header("alg", "HS256")
@@ -75,6 +91,10 @@ class ShortUrlControllerTest {
 
         private UUID ownerId;
         private ShortUrlResponse response;
+        private String searchTerm;
+        private int page;
+        private int size;
+        private PagedShortUrlResponse pageResponse;
 
         @Override
         public ShortUrlResponse createShortUrl(UUID ownerId, CreateShortUrlRequest request) {
@@ -85,6 +105,15 @@ class ShortUrlControllerTest {
         @Override
         public String resolveOriginalUrl(String shortCode) {
             throw new UnsupportedOperationException("Not needed by this test.");
+        }
+
+        @Override
+        public PagedShortUrlResponse listShortUrls(UUID ownerId, String searchTerm, int page, int size) {
+            this.ownerId = ownerId;
+            this.searchTerm = searchTerm;
+            this.page = page;
+            this.size = size;
+            return pageResponse;
         }
     }
 

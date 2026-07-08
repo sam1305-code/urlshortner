@@ -2,13 +2,16 @@ package com.example.urlshortener.url.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
+import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
+import com.example.urlshortener.url.exception.InvalidPageRequestException;
 import com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
@@ -20,6 +23,7 @@ import com.example.urlshortener.url.util.ShortCodeGenerator;
 public class DefaultShortUrlService implements ShortUrlService {
 
     private static final int MAX_SHORT_CODE_ATTEMPTS = 5;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
@@ -68,6 +72,36 @@ public class DefaultShortUrlService implements ShortUrlService {
         }
 
         return shortUrl.originalUrl();
+    }
+
+    @Override
+    public PagedShortUrlResponse listShortUrls(UUID ownerId, String searchTerm, int page, int size) {
+        validatePageRequest(page, size);
+
+        List<ShortUrlResponse> allMatches = shortUrlRepository.findActiveByOwnerId(ownerId, searchTerm)
+                .stream()
+                .map(ShortUrl::toResponse)
+                .toList();
+        int totalItems = allMatches.size();
+        int fromIndex = Math.min(page * size, totalItems);
+        int toIndex = Math.min(fromIndex + size, totalItems);
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / size);
+
+        return new PagedShortUrlResponse(
+                allMatches.subList(fromIndex, toIndex),
+                page,
+                size,
+                totalItems,
+                totalPages);
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 0) {
+            throw new InvalidPageRequestException("Page index must be zero or greater.");
+        }
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new InvalidPageRequestException("Page size must be between 1 and 100.");
+        }
     }
 
     private ShortUrlResponse createWithShortCode(UUID ownerId, CreateShortUrlRequest request, String shortCode) {

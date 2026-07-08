@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
+import com.example.urlshortener.url.exception.InvalidPageRequestException;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
@@ -147,6 +148,42 @@ class DefaultShortUrlServiceTest {
                 "my-alias",
                 null)))
                 .isInstanceOf(com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException.class);
+    }
+
+    @Test
+    void listShortUrlsReturnsOnlyMatchingUrlsForOwnerWithPagination() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("docs-api", "blog-api", "other01"),
+                fixedClock());
+        UUID ownerId = UUID.fromString("f6042fe8-b24d-40c9-8e8a-d773752d127f");
+        UUID otherOwnerId = UUID.fromString("9eb309ac-ff10-4bc8-8f05-c778c1f8fbd3");
+        service.createShortUrl(ownerId, new CreateShortUrlRequest("https://example.com/docs", null, null));
+        service.createShortUrl(ownerId, new CreateShortUrlRequest("https://example.com/blog", null, null));
+        service.createShortUrl(otherOwnerId, new CreateShortUrlRequest("https://example.com/docs", null, null));
+
+        var response = service.listShortUrls(ownerId, "api", 0, 1);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().getFirst().ownerId()).isEqualTo(ownerId);
+        assertThat(response.items().getFirst().shortCode()).contains("api");
+        assertThat(response.page()).isZero();
+        assertThat(response.size()).isEqualTo(1);
+        assertThat(response.totalItems()).isEqualTo(2);
+        assertThat(response.totalPages()).isEqualTo(2);
+    }
+
+    @Test
+    void listShortUrlsRejectsInvalidPageRequest() {
+        DefaultShortUrlService service = new DefaultShortUrlService(
+                repository,
+                new StubShortCodeGenerator("abc123XY"),
+                fixedClock());
+
+        assertThatThrownBy(() -> service.listShortUrls(UUID.randomUUID(), null, -1, 20))
+                .isInstanceOf(InvalidPageRequestException.class);
+        assertThatThrownBy(() -> service.listShortUrls(UUID.randomUUID(), null, 0, 101))
+                .isInstanceOf(InvalidPageRequestException.class);
     }
 
     private Clock fixedClock() {

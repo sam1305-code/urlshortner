@@ -1,5 +1,8 @@
 package com.example.urlshortener.url.repository;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,5 +31,35 @@ public class InMemoryShortUrlRepository implements ShortUrlRepository {
     public Optional<ShortUrl> findByShortCodeAndOwnerId(String shortCode, UUID ownerId) {
         return findByShortCode(shortCode)
                 .filter(shortUrl -> shortUrl.ownerId().equals(ownerId));
+    }
+
+    @Override
+    public List<ShortUrl> findActiveByOwnerId(UUID ownerId, String searchTerm) {
+        String normalizedSearchTerm = normalize(searchTerm);
+
+        return urlsByShortCode.values()
+                .stream()
+                .filter(shortUrl -> shortUrl.ownerId().equals(ownerId))
+                .filter(shortUrl -> !shortUrl.deleted())
+                .filter(shortUrl -> matchesSearch(shortUrl, normalizedSearchTerm))
+                .sorted(Comparator.comparing(ShortUrl::createdAt).reversed())
+                .toList();
+    }
+
+    private boolean matchesSearch(ShortUrl shortUrl, String normalizedSearchTerm) {
+        if (normalizedSearchTerm == null) {
+            return true;
+        }
+
+        return shortUrl.shortCode().toLowerCase(Locale.ROOT).contains(normalizedSearchTerm)
+                || shortUrl.originalUrl().toLowerCase(Locale.ROOT).contains(normalizedSearchTerm);
+    }
+
+    private String normalize(String searchTerm) {
+        if (searchTerm == null || searchTerm.isBlank()) {
+            return null;
+        }
+
+        return searchTerm.trim().toLowerCase(Locale.ROOT);
     }
 }

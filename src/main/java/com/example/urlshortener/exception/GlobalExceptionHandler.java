@@ -14,6 +14,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
 import com.example.urlshortener.auth.exception.InvalidCredentialsException;
+import com.example.urlshortener.url.exception.InvalidPageRequestException;
 import com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
@@ -104,6 +105,19 @@ public class GlobalExceptionHandler {
                 request.getRequestURI());
 
         return ResponseEntity.status(HttpStatus.GONE).body(response);
+    }
+
+    @ExceptionHandler(InvalidPageRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPageRequestException(
+            InvalidPageRequestException exception,
+            HttpServletRequest request) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)

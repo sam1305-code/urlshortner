@@ -17,6 +17,7 @@ import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
 import com.example.urlshortener.exception.GlobalExceptionHandler;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
+import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
 import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
@@ -106,6 +107,11 @@ class RedirectControllerTest {
                 throw new ShortUrlExpiredException(shortCode);
             }
             return originalUrl;
+        }
+
+        @Override
+        public PagedShortUrlResponse listShortUrls(UUID ownerId, String searchTerm, int page, int size) {
+            throw new UnsupportedOperationException("Not needed by this test.");
         }
     }
 

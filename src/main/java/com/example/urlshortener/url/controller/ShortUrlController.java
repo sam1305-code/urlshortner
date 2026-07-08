@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
+import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
 import com.example.urlshortener.url.service.ShortUrlService;
 
@@ -41,6 +43,21 @@ public class ShortUrlController {
         URI location = URI.create("/api/v1/urls/" + response.shortCode());
 
         return ResponseEntity.created(location).body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<PagedShortUrlResponse> listShortUrls(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PagedShortUrlResponse response = shortUrlService.listShortUrls(
+                UUID.fromString(jwt.getSubject()),
+                search,
+                page,
+                size);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{shortCode}/analytics")
