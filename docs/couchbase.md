@@ -102,3 +102,35 @@ CREATE INDEX IF NOT EXISTS idx_user_account_created_at
 ON `url_shortener`(createdAt DESC)
 WHERE type = "user_account";
 ```
+
+## Click Event Document
+
+Document key:
+
+```text
+click::{shortCode}::{eventId}
+```
+
+Example document:
+
+```json
+{
+  "type": "click_event",
+  "id": "48d44fb6-bb15-4882-8786-12f536439cb0",
+  "shortCode": "abc123XY",
+  "clickedAt": "2026-07-08T10:15:30Z",
+  "ipAddress": "203.0.113.10",
+  "userAgent": "Mozilla/5.0",
+  "referer": "https://referrer.example.com"
+}
+```
+
+Click events are append-only. This keeps redirects simple: resolve the short URL, write one event, and return the redirect response. Later, analytics queries can aggregate events by `shortCode`.
+
+Click analytics index:
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_click_event_short_code_clicked_at
+ON `url_shortener`(shortCode, clickedAt DESC)
+WHERE type = "click_event";
+```

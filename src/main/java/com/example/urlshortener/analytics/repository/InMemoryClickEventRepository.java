@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import com.example.urlshortener.analytics.model.ClickEvent;
 
 @Repository
+@Profile("!couchbase")
 public class InMemoryClickEventRepository implements ClickEventRepository {
 
     private final Queue<ClickEvent> clickEvents = new ConcurrentLinkedQueue<>();
