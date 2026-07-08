@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 
 import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
+import com.example.urlshortener.qr.service.QrCodeService;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
@@ -21,13 +22,15 @@ class ShortUrlControllerTest {
 
     private StubShortUrlService shortUrlService;
     private StubClickAnalyticsService clickAnalyticsService;
+    private StubQrCodeService qrCodeService;
     private ShortUrlController controller;
 
     @BeforeEach
     void setUp() {
         shortUrlService = new StubShortUrlService();
         clickAnalyticsService = new StubClickAnalyticsService();
-        controller = new ShortUrlController(shortUrlService, clickAnalyticsService);
+        qrCodeService = new StubQrCodeService();
+        controller = new ShortUrlController(shortUrlService, clickAnalyticsService, qrCodeService);
     }
 
     @Test
@@ -91,6 +94,20 @@ class ShortUrlControllerTest {
         assertThat(shortUrlService.deletedShortCode).isEqualTo("abc123XY");
     }
 
+    @Test
+    void getQrCodeReturnsPngForAuthenticatedOwner() {
+        UUID ownerId = UUID.fromString("9abda1f4-6dd0-4c92-9326-91f0846f2e4f");
+        qrCodeService.response = new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47};
+
+        ResponseEntity<byte[]> response = controller.getQrCode(jwt(ownerId), "abc123XY");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getHeaders().getContentType()).hasToString("image/png");
+        assertThat(response.getBody()).isEqualTo(qrCodeService.response);
+        assertThat(qrCodeService.ownerId).isEqualTo(ownerId);
+        assertThat(qrCodeService.shortCode).isEqualTo("abc123XY");
+    }
+
 
     private Jwt jwt(UUID userId) {
         return Jwt.withTokenValue("token")
@@ -149,6 +166,20 @@ class ShortUrlControllerTest {
 
         @Override
         public ClickAnalyticsResponse getAnalytics(UUID ownerId, String shortCode) {
+            this.ownerId = ownerId;
+            this.shortCode = shortCode;
+            return response;
+        }
+    }
+
+    private static class StubQrCodeService implements QrCodeService {
+
+        private UUID ownerId;
+        private String shortCode;
+        private byte[] response;
+
+        @Override
+        public byte[] generateQrCode(UUID ownerId, String shortCode) {
             this.ownerId = ownerId;
             this.shortCode = shortCode;
             return response;

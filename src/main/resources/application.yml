@@ -16,6 +16,8 @@ management:
         enabled: true
 
 app:
+  url-shortener:
+    public-base-url: http://localhost:8080
   security:
     jwt:
       issuer: distributed-url-shortener

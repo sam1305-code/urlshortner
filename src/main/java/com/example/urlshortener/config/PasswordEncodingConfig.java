@@ -8,7 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, UrlShortenerProperties.class})
 public class PasswordEncodingConfig {
 
     @Bean

@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.urlshortener.analytics.dto.ClickAnalyticsResponse;
 import com.example.urlshortener.analytics.service.ClickAnalyticsService;
+import com.example.urlshortener.qr.service.QrCodeService;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
@@ -30,10 +32,15 @@ public class ShortUrlController {
 
     private final ShortUrlService shortUrlService;
     private final ClickAnalyticsService clickAnalyticsService;
+    private final QrCodeService qrCodeService;
 
-    public ShortUrlController(ShortUrlService shortUrlService, ClickAnalyticsService clickAnalyticsService) {
+    public ShortUrlController(
+            ShortUrlService shortUrlService,
+            ClickAnalyticsService clickAnalyticsService,
+            QrCodeService qrCodeService) {
         this.shortUrlService = shortUrlService;
         this.clickAnalyticsService = clickAnalyticsService;
+        this.qrCodeService = qrCodeService;
     }
 
     @PostMapping
@@ -77,5 +84,16 @@ public class ShortUrlController {
         shortUrlService.deleteShortUrl(UUID.fromString(jwt.getSubject()), shortCode);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/{shortCode}/qr-code", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> getQrCode(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String shortCode) {
+        byte[] qrCode = qrCodeService.generateQrCode(UUID.fromString(jwt.getSubject()), shortCode);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(qrCode);
     }
 }
