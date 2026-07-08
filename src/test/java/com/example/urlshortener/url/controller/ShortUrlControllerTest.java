@@ -63,5 +63,10 @@ class ShortUrlControllerTest {
             this.ownerId = ownerId;
             return response;
         }
+
+        @Override
+        public String resolveOriginalUrl(String shortCode) {
+            throw new UnsupportedOperationException("Not needed by this test.");
+        }
     }
 }

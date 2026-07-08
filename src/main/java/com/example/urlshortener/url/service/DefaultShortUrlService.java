@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
+import com.example.urlshortener.url.exception.ShortUrlExpiredException;
+import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
 import com.example.urlshortener.url.model.ShortUrl;
 import com.example.urlshortener.url.repository.ShortUrlRepository;
 import com.example.urlshortener.url.util.ShortCodeGenerator;
@@ -54,5 +56,18 @@ public class DefaultShortUrlService implements ShortUrlService {
         }
 
         throw new IllegalStateException("Unable to allocate a unique short code.");
+    }
+
+    @Override
+    public String resolveOriginalUrl(String shortCode) {
+        ShortUrl shortUrl = shortUrlRepository.findByShortCode(shortCode)
+                .filter(url -> !url.deleted())
+                .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
+
+        if (shortUrl.expiresAt() != null && !shortUrl.expiresAt().isAfter(Instant.now(clock))) {
+            throw new ShortUrlExpiredException(shortCode);
+        }
+
+        return shortUrl.originalUrl();
     }
 }

@@ -14,6 +14,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
 import com.example.urlshortener.auth.exception.InvalidCredentialsException;
+import com.example.urlshortener.url.exception.ShortUrlExpiredException;
+import com.example.urlshortener.url.exception.ShortUrlNotFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -62,6 +64,32 @@ public class GlobalExceptionHandler {
                 request.getRequestURI());
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(ShortUrlNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleShortUrlNotFoundException(
+            ShortUrlNotFoundException exception,
+            HttpServletRequest request) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                "Short URL was not found.",
+                request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ShortUrlExpiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleShortUrlExpiredException(
+            ShortUrlExpiredException exception,
+            HttpServletRequest request) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.GONE.value(),
+                HttpStatus.GONE.getReasonPhrase(),
+                "Short URL has expired.",
+                request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.GONE).body(response);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
