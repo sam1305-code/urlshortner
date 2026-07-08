@@ -12,7 +12,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         JwtProperties.class,
         UrlShortenerProperties.class,
         RateLimitProperties.class,
-        CouchbaseAppProperties.class
+        CouchbaseAppProperties.class,
+        RedisCacheProperties.class
 })
 public class PasswordEncodingConfig {
 

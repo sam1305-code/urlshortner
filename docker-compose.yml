@@ -8,5 +8,15 @@ services:
     volumes:
       - couchbase-data:/opt/couchbase/var
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: url-shortener-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+
 volumes:
   couchbase-data:
+  redis-data:

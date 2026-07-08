@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import com.example.urlshortener.url.dto.CreateShortUrlRequest;
 import com.example.urlshortener.url.dto.PagedShortUrlResponse;
 import com.example.urlshortener.url.dto.ShortUrlResponse;
+import com.example.urlshortener.url.cache.NoOpShortUrlCache;
+import com.example.urlshortener.url.cache.ShortUrlCache;
 import com.example.urlshortener.url.exception.InvalidPageRequestException;
 import com.example.urlshortener.url.exception.ShortCodeAlreadyExistsException;
 import com.example.urlshortener.url.exception.ShortUrlExpiredException;
@@ -27,19 +29,32 @@ public class DefaultShortUrlService implements ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
     private final ShortCodeGenerator shortCodeGenerator;
+    private final ShortUrlCache shortUrlCache;
     private final Clock clock;
 
     @Autowired
-    public DefaultShortUrlService(ShortUrlRepository shortUrlRepository, ShortCodeGenerator shortCodeGenerator) {
-        this(shortUrlRepository, shortCodeGenerator, Clock.systemUTC());
+    public DefaultShortUrlService(
+            ShortUrlRepository shortUrlRepository,
+            ShortCodeGenerator shortCodeGenerator,
+            ShortUrlCache shortUrlCache) {
+        this(shortUrlRepository, shortCodeGenerator, shortUrlCache, Clock.systemUTC());
     }
 
     DefaultShortUrlService(
             ShortUrlRepository shortUrlRepository,
             ShortCodeGenerator shortCodeGenerator,
             Clock clock) {
+        this(shortUrlRepository, shortCodeGenerator, new NoOpShortUrlCache(), clock);
+    }
+
+    DefaultShortUrlService(
+            ShortUrlRepository shortUrlRepository,
+            ShortCodeGenerator shortCodeGenerator,
+            ShortUrlCache shortUrlCache,
+            Clock clock) {
         this.shortUrlRepository = shortUrlRepository;
         this.shortCodeGenerator = shortCodeGenerator;
+        this.shortUrlCache = shortUrlCache;
         this.clock = clock;
     }
 
@@ -63,14 +78,24 @@ public class DefaultShortUrlService implements ShortUrlService {
 
     @Override
     public String resolveOriginalUrl(String shortCode) {
+        Instant now = Instant.now(clock);
+        var cachedShortUrl = shortUrlCache.get(shortCode);
+        if (cachedShortUrl.isPresent()) {
+            if (!cachedShortUrl.orElseThrow().isExpired(now)) {
+                return cachedShortUrl.orElseThrow().originalUrl();
+            }
+            shortUrlCache.evict(shortCode);
+        }
+
         ShortUrl shortUrl = shortUrlRepository.findByShortCode(shortCode)
                 .filter(url -> !url.deleted())
                 .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
 
-        if (shortUrl.expiresAt() != null && !shortUrl.expiresAt().isAfter(Instant.now(clock))) {
+        if (shortUrl.expiresAt() != null && !shortUrl.expiresAt().isAfter(now)) {
             throw new ShortUrlExpiredException(shortCode);
         }
 
+        shortUrlCache.put(shortUrl, now);
         return shortUrl.originalUrl();
     }
 
@@ -102,6 +127,7 @@ public class DefaultShortUrlService implements ShortUrlService {
                 .orElseThrow(() -> new ShortUrlNotFoundException(shortCode));
 
         shortUrlRepository.save(shortUrl.markDeleted());
+        shortUrlCache.evict(shortCode);
     }
 
     private void validatePageRequest(int page, int size) {
