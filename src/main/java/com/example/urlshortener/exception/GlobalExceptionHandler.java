@@ -13,6 +13,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
+import com.example.urlshortener.auth.exception.InvalidCredentialsException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -48,6 +49,19 @@ public class GlobalExceptionHandler {
                 request.getRequestURI());
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCredentialsException(
+            InvalidCredentialsException exception,
+            HttpServletRequest request) {
+        ApiErrorResponse response = ApiErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                "Invalid email or password.",
+                request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)

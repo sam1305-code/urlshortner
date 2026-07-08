@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.urlshortener.auth.dto.UserLoginRequest;
+import com.example.urlshortener.auth.dto.UserLoginResponse;
 import com.example.urlshortener.auth.dto.UserRegistrationRequest;
 import com.example.urlshortener.auth.dto.UserRegistrationResponse;
 import com.example.urlshortener.auth.service.AuthService;
@@ -31,5 +33,10 @@ public class AuthController {
         URI location = URI.create("/api/v1/users/" + response.id());
 
         return ResponseEntity.created(location).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<UserLoginResponse> login(@Valid @RequestBody UserLoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 }

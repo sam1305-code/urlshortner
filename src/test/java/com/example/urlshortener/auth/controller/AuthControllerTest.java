@@ -18,8 +18,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.example.urlshortener.auth.dto.UserLoginRequest;
+import com.example.urlshortener.auth.dto.UserLoginResponse;
 import com.example.urlshortener.auth.dto.UserRegistrationResponse;
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
+import com.example.urlshortener.auth.exception.InvalidCredentialsException;
 import com.example.urlshortener.auth.service.AuthService;
 import com.example.urlshortener.exception.GlobalExceptionHandler;
 
@@ -103,6 +106,65 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.message").value("Email is already registered."));
     }
 
+    @Test
+    void loginReturnsAuthenticatedUserWithoutPassword() throws Exception {
+        UUID userId = UUID.fromString("2a6d43b0-efc6-4ec5-b1e3-448bb7dd7462");
+        authService.loginHandler = request -> new UserLoginResponse(
+                userId,
+                "Samhita",
+                "samhita@example.com");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "samhita@example.com",
+                                  "password": "StrongPass123!"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(userId.toString()))
+                .andExpect(jsonPath("$.name").value("Samhita"))
+                .andExpect(jsonPath("$.email").value("samhita@example.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void loginRejectsInvalidRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "invalid-email",
+                                  "password": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Request validation failed."))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("email")))
+                .andExpect(jsonPath("$.fieldErrors[*].field", hasItem("password")));
+    }
+
+    @Test
+    void loginReturnsUnauthorizedForInvalidCredentials() throws Exception {
+        authService.loginHandler = request -> {
+            throw new InvalidCredentialsException();
+        };
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "samhita@example.com",
+                                  "password": "WrongPass123!"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password."));
+    }
+
     private static class StubAuthService implements AuthService {
 
         private Function<com.example.urlshortener.auth.dto.UserRegistrationRequest, UserRegistrationResponse> registerHandler =
@@ -111,10 +173,20 @@ class AuthControllerTest {
                         request.name(),
                         request.email(),
                         Instant.now());
+        private Function<UserLoginRequest, UserLoginResponse> loginHandler =
+                request -> new UserLoginResponse(
+                        UUID.randomUUID(),
+                        "Samhita",
+                        request.email());
 
         @Override
         public UserRegistrationResponse register(com.example.urlshortener.auth.dto.UserRegistrationRequest request) {
             return registerHandler.apply(request);
+        }
+
+        @Override
+        public UserLoginResponse login(UserLoginRequest request) {
+            return loginHandler.apply(request);
         }
     }
 }

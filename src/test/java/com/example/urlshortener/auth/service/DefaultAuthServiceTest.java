@@ -8,8 +8,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.example.urlshortener.auth.dto.UserLoginRequest;
+import com.example.urlshortener.auth.dto.UserLoginResponse;
 import com.example.urlshortener.auth.dto.UserRegistrationRequest;
 import com.example.urlshortener.auth.exception.EmailAlreadyRegisteredException;
+import com.example.urlshortener.auth.exception.InvalidCredentialsException;
 import com.example.urlshortener.auth.model.UserAccount;
 import com.example.urlshortener.auth.repository.InMemoryUserAccountRepository;
 import com.example.urlshortener.auth.repository.UserAccountRepository;
@@ -56,5 +59,47 @@ class DefaultAuthServiceTest {
 
         assertThatThrownBy(() -> authService.register(duplicateRequest))
                 .isInstanceOf(EmailAlreadyRegisteredException.class);
+    }
+
+    @Test
+    void loginReturnsUserWhenPasswordMatchesStoredHash() {
+        authService.register(new UserRegistrationRequest(
+                "Samhita",
+                "samhita@example.com",
+                "StrongPass123!"));
+
+        UserLoginResponse response = authService.login(new UserLoginRequest(
+                "  SAMHITA@example.COM ",
+                "StrongPass123!"));
+
+        assertThat(response.name()).isEqualTo("Samhita");
+        assertThat(response.email()).isEqualTo("samhita@example.com");
+    }
+
+    @Test
+    void loginRejectsUnknownEmailWithGenericMessage() {
+        UserLoginRequest request = new UserLoginRequest(
+                "missing@example.com",
+                "StrongPass123!");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password.");
+    }
+
+    @Test
+    void loginRejectsWrongPasswordWithGenericMessage() {
+        authService.register(new UserRegistrationRequest(
+                "Samhita",
+                "samhita@example.com",
+                "StrongPass123!"));
+
+        UserLoginRequest request = new UserLoginRequest(
+                "samhita@example.com",
+                "WrongPass123!");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password.");
     }
 }
